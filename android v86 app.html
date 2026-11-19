@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0b0d">
+<title>Android</title>
+<style>
+  :root{--bg:#0b0b0d;--card:#16161a;--line:#26262c;--fg:#f2f2f5;--dim:#8a8a93;--acc:#3ddc84}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  [hidden]{display:none!important}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font:16px -apple-system,system-ui,sans-serif;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+  button,input,select{font:inherit;color:inherit}
+  .dim{color:var(--dim);font-size:13px}
+
+  /* библиотека */
+  #lib{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px 40px}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  h1{font-size:28px;font-weight:700;margin:0;letter-spacing:-.5px}
+  .pill{background:var(--acc);color:#04210f;border:0;border-radius:999px;padding:9px 16px;font-weight:600}
+  .card{display:flex;align-items:center;justify-content:space-between;background:var(--card);
+    border:1px solid var(--line);border-radius:16px;padding:14px 14px 14px 16px;margin-bottom:10px}
+  .card .meta{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+  .card b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acts{display:flex;gap:6px}
+  .acts button{background:transparent;border:1px solid var(--line);border-radius:10px;width:38px;height:38px;color:var(--dim)}
+
+  /* экран эмулятора */
+  #play{position:fixed;inset:0;background:#000}
+  #stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+  #screen{width:100%}
+  #screen canvas{width:100%!important;height:auto!important;display:block;touch-action:none}
+  #fab{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;width:38px;height:38px;border-radius:50%;
+    border:0;background:rgba(255,255,255,.14);color:#fff;font-size:20px;opacity:.55;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  #toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);
+    background:rgba(30,30,34,.92);padding:9px 16px;border-radius:999px;font-size:14px;pointer-events:none;opacity:0;transition:opacity .2s}
+  #toast.on{opacity:1}
+
+  /* нижняя панель */
+  #sheetbg{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+  #sheet{position:absolute;left:0;right:0;bottom:0;background:#141418;border-radius:20px 20px 0 0;
+    padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);border-top:1px solid var(--line)}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+  .grid button,.wide{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 4px;font-size:14px}
+  .wide{width:100%;margin-top:8px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px;font-size:15px}
+  .row input[type=number]{width:72px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+  .danger{color:#ff6b6b}
+  #ser{position:absolute;left:0;right:0;top:0;height:50%;margin:0;overflow:auto;background:rgba(0,0,0,.88);
+    color:#9f9;font:11px ui-monospace,monospace;padding:calc(env(safe-area-inset-top,0px) + 8px) 8px 8px;white-space:pre-wrap;user-select:text}
+
+  /* диалог создания */
+  #dlg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:5}
+  #dlgbox{width:100%;max-width:560px;background:#141418;border-radius:20px 20px 0 0;padding:20px 16px calc(env(safe-area-inset-bottom,0px) + 18px);border-top:1px solid var(--line)}
+  #dlgbox h2{margin:0 0 14px;font-size:20px}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+  .field input,.field select{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%}
+  .btns{display:flex;gap:8px;margin-top:6px}
+  .btns button{flex:1;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card)}
+  .btns .go{background:var(--acc);color:#04210f;border:0;font-weight:600}
+  /* анимации */
+  #lib{animation:fadeUp .35s ease both}
+  .card{animation:fadeUp .4s ease both;transition:transform .15s ease,background .2s}
+  .card:active{transform:scale(.985);background:#1c1c21}
+  .pill,.grid button,.wide,.btns button,.acts button{transition:transform .12s ease,opacity .2s}
+  .pill:active,.grid button:active,.wide:active,.btns button:active,.acts button:active{transform:scale(.95);opacity:.8}
+  #sheetbg{animation:fade .2s ease both}
+  #sheet{animation:slideUp .28s cubic-bezier(.2,.8,.2,1) both}
+  #dlgbox{animation:slideUp .28s cubic-bezier(.2,.8,.2,1) both}
+  #play{animation:fade .4s ease both}
+  #toast.on::before{content:"";display:inline-block;width:10px;height:10px;margin-right:8px;border-radius:50%;
+    border:2px solid rgba(255,255,255,.25);border-top-color:var(--acc);animation:spin .8s linear infinite;vertical-align:-1px}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<main id="lib">
+  <header><h1>Android</h1><button class="pill" id="new">+ Новый</button></header>
+  <div id="list"></div>
+  <p id="empty" class="dim">Контейнеров пока нет. Нажми «Новый», выбери ISO: он скопируется в память браузера, и дальше выбирать файл не придётся.</p>
+</main>
+
+<section id="play" hidden>
+  <div id="stage"><div id="screen"><div></div><canvas></canvas></div></div>
+  <button id="fab" aria-label="Меню">⋯</button>
+  <pre id="ser" hidden></pre>
+  <div id="toast"></div>
+  <div id="sheetwrap" hidden>
+    <div id="sheetbg"></div>
+    <div id="sheet">
+      <div class="grid">
+        <button id="b_back">◀<br>Назад</button>
+        <button id="b_home">⌂<br>Домой</button>
+        <button id="b_menu">☰<br>Меню</button>
+        <button id="b_save">💾<br>Сохранить</button>
+      </div>
+      <div class="row"><span>Скорость курсора</span><input id="k" type="number" step="0.1" value="1"></div>
+      <div class="row"><span>Автосохранение (5 мин)<br><span class="dim">много памяти, может закрыть вкладку</span></span><input id="auto" type="checkbox"></div>
+      <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:8px">
+        <button id="b_calib">Калибровка</button>
+        <button id="b_pause">Пауза</button>
+        <button id="b_log">Лог</button>
+      </div>
+      <button class="wide danger" id="b_exit">Сохранить и выйти</button>
+    </div>
+  </div>
+</section>
+
+<div id="dlg" hidden>
+  <div id="dlgbox">
+    <h2>Новый контейнер</h2>
+    <div class="field"><span class="dim">Образ ISO</span><input type="file" id="f_iso" accept=".iso"></div>
+    <div class="field"><span class="dim">Название</span><input id="f_name" value="Android 4.4"></div>
+    <div class="field"><span class="dim">Разрешение (меньше = быстрее)</span>
+      <select id="f_res"><option value="785" selected>Быстро · 640×480</option><option value="788">Обычно · 800×600</option></select></div>
+    <div class="field"><span class="dim">Память</span>
+      <select id="f_mem"><option value="384" selected>384 МБ · безопаснее для сохранения</option><option value="512">512 МБ</option><option value="768">768 МБ</option></select></div>
+    <div class="row"><span>Подробный лог загрузки</span><input type="checkbox" id="f_verbose"></div>
+    <div id="f_prog" class="dim" style="min-height:18px"></div>
+    <div class="btns"><button id="f_cancel">Отмена</button><button class="go" id="f_go">Создать</button></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const RES_NAME = {785:'640×480', 788:'800×600'};
+
+/* ---------- хранилище (IndexedDB) ---------- */
+const DB = {
+  db: null,
+  open(){ return new Promise((res, rej) => {
+    const r = indexedDB.open('andv86', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('meta', {keyPath:'id'}); r.result.createObjectStore('blobs'); };
+    r.onsuccess = () => { this.db = r.result; res(); };
+    r.onerror = () => rej(r.error);
+  }); },
+  tx(store, mode, fn){ return new Promise((res, rej) => {
+    const t = this.db.transaction(store, mode);
+    const rq = fn(t.objectStore(store));
+    t.oncomplete = () => res(rq && rq.result);
+    t.onerror = t.onabort = () => rej(t.error);
+  }); },
+  put(store, val, key){ return this.tx(store, 'readwrite', o => key === undefined ? o.put(val) : o.put(val, key)); },
+  get(store, key){ return this.tx(store, 'readonly', o => o.get(key)); },
+  all(store){ return this.tx(store, 'readonly', o => o.getAll()); },
+  del(store, key){ return this.tx(store, 'readwrite', o => o.delete(key)); }
+};
+
+/* ---------- мелочи ---------- */
+let toastT = null;
+function toast(msg, sticky){
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastT); if(!sticky) toastT = setTimeout(() => t.classList.remove('on'), 2200);
+}
+const fmt = ts => new Date(ts).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+
+/* ---------- библиотека ---------- */
+async function renderLib(){
+  const list = await DB.all('meta');
+  list.sort((a, b) => (b.used || 0) - (a.used || 0));
+  $('list').innerHTML = '';
+  $('empty').hidden = list.length > 0;
+  for(const m of list){
+    const d = document.createElement('div');
+    d.className = 'card';
+    d.innerHTML = '<div class="meta"><b></b><span class="dim"></span></div><div class="acts"><button data-a="fresh" title="Загрузить заново">↺</button><button data-a="del" title="Удалить">✕</button></div>';
+    d.querySelector('b').textContent = m.name;
+    d.querySelector('.dim').textContent = (m.saved ? 'сохранён ' + fmt(m.saved) : 'ещё не сохранялся') + ' · ' + m.mem + ' МБ · ' + (RES_NAME[m.vga] || '');
+    d.querySelector('.meta').onclick = () => openContainer(m.id, false);
+    d.querySelector('[data-a=fresh]').onclick = e => { e.stopPropagation(); if(confirm('Загрузить «' + m.name + '» с нуля? Сохранённое состояние останется до следующего сохранения.')) openContainer(m.id, true); };
+    d.querySelector('[data-a=del]').onclick = async e => {
+      e.stopPropagation();
+      if(!confirm('Удалить «' + m.name + '» вместе с данными?')) return;
+      await DB.del('meta', m.id); await DB.del('blobs', 'iso:' + m.id); await DB.del('blobs', 'state:' + m.id);
+      renderLib();
+    };
+    $('list').appendChild(d);
+  }
+}
+
+/* ---------- создание контейнера ---------- */
+$('new').onclick = () => { $('f_prog').textContent = ''; $('dlg').hidden = false; };
+$('f_cancel').onclick = () => { $('dlg').hidden = true; };
+$('f_go').onclick = async () => {
+  const f = $('f_iso').files[0];
+  if(!f){ $('f_prog').textContent = 'Сначала выбери ISO'; return; }
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  $('f_go').disabled = true;
+  $('f_prog').textContent = 'Копирую образ в память браузера…';
+  try{
+    try{ if(navigator.storage && navigator.storage.persist) await navigator.storage.persist(); }catch(e){}
+    await DB.put('blobs', f, 'iso:' + id);
+    await DB.put('meta', {
+      id, name: $('f_name').value.trim() || 'Android', vga: parseInt($('f_res').value),
+      mem: parseInt($('f_mem').value), verbose: $('f_verbose').checked, used: Date.now(), saved: 0
+    });
+    $('dlg').hidden = true;
+    await renderLib();
+    openContainer(id, true);
+  }catch(e){
+    $('f_prog').textContent = 'Не удалось сохранить образ: ' + e;
+  }finally{ $('f_go').disabled = false; }
+};
+
+/* ---------- чтение ISO9660 ---------- */
+async function readRootFiles(file){
+  const pvd = new DataView(await file.slice(16*2048, 17*2048).arrayBuffer());
+  const rootLba = pvd.getUint32(158, true), rootLen = pvd.getUint32(166, true);
+  const dir = new Uint8Array(await file.slice(rootLba*2048, rootLba*2048 + rootLen).arrayBuffer());
+  const dv = new DataView(dir.buffer);
+  const files = {};
+  let p = 0;
+  while(p < dir.length){
+    const len = dir[p];
+    if(len === 0){ p = (Math.floor(p/2048) + 1) * 2048; continue; }
+    const nl = dir[p+32]; let name = '';
+    for(let i = 0; i < nl; i++) name += String.fromCharCode(dir[p+33+i]);
+    name = name.replace(/;1$/, '').replace(/\.$/, '').toLowerCase();
+    if(!(dir[p+25] & 2)) files[name] = {lba: dv.getUint32(p+2, true), size: dv.getUint32(p+10, true)};
+    p += len;
+  }
+  return files;
+}
+const readFile = (iso, f) => iso.slice(f.lba*2048, f.lba*2048 + f.size).arrayBuffer();
+
+/* ---------- загрузка v86 и BIOS (с кэшем) ---------- */
+let loadedV86 = false, v86Base = '';
+function tryScript(src){
+  return new Promise((ok, no) => {
+    const sc = document.createElement('script');
+    sc.src = src; sc.onload = () => window.V86 ? ok() : no(); sc.onerror = () => no();
+    document.head.appendChild(sc);
+  });
+}
+async function loadV86(){
+  if(loadedV86 && window.V86) return;
+  try{ await tryScript('v86/libv86.js'); v86Base = 'v86/'; }
+  catch(e){
+    try{ await tryScript('https://cdn.jsdelivr.net/npm/v86@latest/build/libv86.js'); v86Base = 'https://cdn.jsdelivr.net/npm/v86@latest/build/'; }
+    catch(e2){ throw new Error('Не загрузился эмулятор v86 (нет сети?)'); }
+  }
+  loadedV86 = true;
+}
+const mirrors = n => [
+  'v86/' + n,
+  'https://cdn.jsdelivr.net/gh/copy/v86@master/bios/' + n,
+  'https://raw.githubusercontent.com/copy/v86/master/bios/' + n,
+  'https://copy.sh/v86/bios/' + n,
+  'https://fastly.jsdelivr.net/gh/copy/v86@master/bios/' + n,
+  'https://gcore.jsdelivr.net/gh/copy/v86@master/bios/' + n
+];
+async function getBios(name){
+  const key = 'bios:' + name;
+  try{ const c = await DB.get('blobs', key); if(c) return c; }catch(e){}
+  for(const u of mirrors(name)){
+    try{
+      const r = await fetch(u);
+      if(r.ok){ const b = await r.arrayBuffer(); if(b.byteLength < 10000) continue; try{ await DB.put('blobs', b.slice(0), key); }catch(e){} return b; }
+    }catch(e){}
+  }
+  throw new Error('Не скачался ' + name + ' (проверь интернет/VPN)');
+}
+
+/* ---------- запуск контейнера ---------- */
+let emu = null, cur = null, curMeta = null, saving = false, autoT = null, serBuf = '';
+
+function buildCmd(m){
+  // всё лишнее выключено: меньше вывода в консоль = быстрее загрузка
+  let c = 'root=/dev/ram0 androidboot.hardware=android_x86 nomodeset SRC= DATA= acpi=off noapic nolapic percpu_alloc=embed HWACCEL=0 vga=' + m.vga;
+  c += m.verbose ? ' console=ttyS0,115200 console=tty0 loglevel=7' : ' quiet loglevel=0';
+  return c;
+}
+
+async function openContainer(id, fresh){
+  const m = await DB.get('meta', id);
+  if(!m) return;
+  cur = id; curMeta = m;
+  $('lib').hidden = true; $('play').hidden = false;
+  $('sheetwrap').hidden = true; $('ser').hidden = true;
+  toast('Готовлю…', true);
+  try{
+    const isoBlob = await DB.get('blobs', 'iso:' + id);
+    if(!isoBlob) throw new Error('Образ ISO не найден в памяти браузера');
+    const iso = new File([isoBlob], 'android.iso');
+    const files = await readRootFiles(iso);
+    if(!files['kernel'] || !files['initrd.img']) throw new Error('В ISO нет kernel/initrd.img. Файлы: ' + Object.keys(files).join(', '));
+    const kernel = await readFile(iso, files['kernel']);
+    const initrd = await readFile(iso, files['initrd.img']);
+    toast('Загружаю эмулятор…', true);
+    await loadV86();
+    const [bios, vgabios] = await Promise.all([getBios('seabios.bin'), getBios('vgabios.bin')]);
+    const state = fresh ? null : await DB.get('blobs', 'state:' + id);
+
+    $('screen').innerHTML = '<div></div><canvas></canvas>';
+    serBuf = ''; $('ser').textContent = '';
+    emu = new V86({
+      wasm_path: v86Base + 'v86.wasm',
+      bios: {buffer: bios}, vga_bios: {buffer: vgabios},
+      memory_size: m.mem * 1024 * 1024,
+      vga_memory_size: 16 * 1024 * 1024,
+      screen_container: $('screen'),
+      cdrom: {buffer: iso},
+      bzimage: {buffer: kernel}, initrd: {buffer: initrd},
+      cmdline: buildCmd(m),
+      autostart: false,
+      acpi: false,
+      disable_speaker: true
+    });
+    emu.add_listener('serial0-output-byte', b => {
+      if(!m.verbose) return;
+      serBuf += String.fromCharCode(b);
+      if(serBuf.length > 40000) serBuf = serBuf.slice(-40000);
+      const el = $('ser'); el.textContent = serBuf; el.scrollTop = el.scrollHeight;
+    });
+    emu.add_listener('emulator-ready', async () => {
+      let restored = false;
+      if(state){
+        try{ toast('Восстанавливаю сохранение…', true); await emu.restore_state(state); restored = true; }
+        catch(e){ toast('Сохранение не подошло, загружаю заново'); }
+      }
+      emu.run();
+      setupTouch();
+      setTimeout(calibrate, 2500);
+      startAuto();
+      curMeta.used = Date.now(); DB.put('meta', curMeta).catch(() => {});
+      toast(restored ? 'Продолжаем с сохранения' : 'Загрузка Android… это займёт несколько минут', false);
+    });
+  }catch(e){
+    toast('Ошибка: ' + e.message, true);
+    console.error(e);
+    setTimeout(exitToLib, 3500);
+  }
+}
+
+/* ---------- сохранение ---------- */
+async function saveNow(){
+  if(!emu || saving) return;
+  saving = true; toast('Сохраняю…', true);
+  try{
+    const st = await emu.save_state();
+    if(!st) throw new Error('эмулятор не вернул состояние');
+    await DB.put('blobs', st, 'state:' + cur);
+    curMeta.saved = Date.now(); await DB.put('meta', curMeta);
+    toast('Сохранено');
+  }catch(e){ toast('Ошибка сохранения: ' + (e.message || e)); }
+  finally{ saving = false; }
+}
+function startAuto(){
+  clearInterval(autoT);
+  autoT = setInterval(() => { if($('auto').checked) saveNow(); }, 5 * 60 * 1000);
+}
+async function exitToLib(){
+  clearInterval(autoT);
+  if(emu){ await saveNow(); try{ emu.destroy(); }catch(e){} emu = null; }
+  $('play').hidden = true; $('lib').hidden = false; $('sheetwrap').hidden = true;
+  renderLib();
+}
+
+/* ---------- тач → мышь ---------- */
+let cx = 0, cy = 0;
+function sendDelta(dx, dy){
+  if(!emu) return;
+  const k = parseFloat($('k').value) || 1;
+  let rx = dx * k, ry = dy * k;
+  while(Math.abs(rx) > 0.5 || Math.abs(ry) > 0.5){
+    const sx = Math.max(-40, Math.min(40, rx)), sy = Math.max(-40, Math.min(40, ry));
+    emu.bus.send('mouse-delta', [Math.round(sx), -Math.round(sy)]);
+    rx -= sx; ry -= sy;
+  }
+}
+function moveTo(x, y){ sendDelta(x - cx, y - cy); cx = x; cy = y; }
+function calibrate(){ sendDelta(-6000, -6000); cx = 0; cy = 0; }
+function click(down){ if(emu) emu.bus.send('mouse-click', [down, false, false]); }
+function sendKey(code){
+  if(!emu) return;
+  const make = code.slice(), brk = code.slice(); brk[brk.length-1] |= 0x80;
+  emu.keyboard_send_scancodes(make);
+  setTimeout(() => emu && emu.keyboard_send_scancodes(brk), 80);
+}
+function setupTouch(){
+  const cv = $('screen').querySelector('canvas');
+  if(!cv) return;
+  try{ emu.mouse_set_enabled(false); }catch(e){}
+  const pos = t => {
+    const r = cv.getBoundingClientRect(), w = cv.width || 640, h = cv.height || 480;
+    return [(t.clientX - r.left) / r.width * w, (t.clientY - r.top) / r.height * h];
+  };
+  cv.addEventListener('touchstart', e => { e.preventDefault(); const [x, y] = pos(e.touches[0]); moveTo(x, y); setTimeout(() => click(true), 40); }, {passive:false});
+  cv.addEventListener('touchmove',  e => { e.preventDefault(); const [x, y] = pos(e.touches[0]); moveTo(x, y); }, {passive:false});
+  const up = e => { e.preventDefault(); click(false); };
+  cv.addEventListener('touchend', up, {passive:false});
+  cv.addEventListener('touchcancel', up, {passive:false});
+}
+
+/* ---------- панель ---------- */
+$('fab').onclick = () => { $('sheetwrap').hidden = false; };
+$('sheetbg').onclick = () => { $('sheetwrap').hidden = true; };
+$('b_back').onclick = () => sendKey([0x01]);
+$('b_home').onclick = () => sendKey([0xe0, 0x47]);
+$('b_menu').onclick = () => sendKey([0x3c]);
+$('b_save').onclick = () => { $('sheetwrap').hidden = true; saveNow(); };
+$('b_calib').onclick = () => { calibrate(); toast('Курсор откалиброван'); };
+$('b_pause').onclick = () => {
+  if(!emu) return;
+  if($('b_pause').textContent === 'Пауза'){ emu.stop(); $('b_pause').textContent = 'Дальше'; }
+  else{ emu.run(); $('b_pause').textContent = 'Пауза'; }
+};
+$('b_log').onclick = () => { $('ser').hidden = !$('ser').hidden; $('sheetwrap').hidden = true; };
+$('b_exit').onclick = () => { $('sheetwrap').hidden = true; exitToLib(); };
+try{ const k = localStorage.getItem('k'); if(k) $('k').value = k; }catch(e){}
+$('k').onchange = () => { try{ localStorage.setItem('k', $('k').value); }catch(e){} };
+
+/* ---------- старт ---------- */
+DB.open().then(renderLib).catch(e => { $('empty').hidden = false; $('empty').textContent = 'Хранилище браузера недоступно: ' + e; });
+</script>
+</body>
+</html>

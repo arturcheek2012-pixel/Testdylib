@@ -10,6 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Выбрать стабильный Xcode (не самый новый)
+        run: |
+          echo "Установленные Xcode:"; ls -d /Applications/Xcode*.app || true
+          XC=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XC" ]; then XC=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1); fi
+          if [ -n "$XC" ]; then sudo xcode-select -s "$XC"; fi
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
       - name: Скачать эмулятор v86 в приложение
         run: |
           mkdir -p App/Resources/v86 App/Sources
@@ -179,7 +188,15 @@ jobs:
           xcodegen generate
           xcodebuild -project AndroidBox.xcodeproj -scheme AndroidBox \
             -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+          echo "=== Info.plist ==="
+          plutil -p build/Build/Products/Release-iphoneos/AndroidBox.app/Info.plist
+          echo "=== содержимое .app ==="
+          ls -la build/Build/Products/Release-iphoneos/AndroidBox.app
+          ls -la build/Build/Products/Release-iphoneos/AndroidBox.app/Resources || true
+          echo "=== бинарник ==="
+          file build/Build/Products/Release-iphoneos/AndroidBox.app/AndroidBox
+          otool -l build/Build/Products/Release-iphoneos/AndroidBox.app/AndroidBox | grep -A4 LC_BUILD_VERSION || true
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/AndroidBox.app Payload/
           zip -qry AndroidBox.ipa Payload

@@ -22,22 +22,34 @@ jobs:
           cp index.html App/Resources/index.html
           ls -la App/Resources/v86
 
-      - name: AppDelegate
+      - name: AppDelegate и SceneDelegate
         run: |
           cat > App/Sources/AppDelegate.swift <<'EOF'
           import UIKit
 
           @main
           class AppDelegate: UIResponder, UIApplicationDelegate {
-              var window: UIWindow?
-
               func application(_ application: UIApplication,
                                didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-                  window = UIWindow(frame: UIScreen.main.bounds)
-                  window?.rootViewController = ViewController()
-                  window?.makeKeyAndVisible()
-                  application.isIdleTimerDisabled = true   // экран не гаснет, пока идёт эмуляция
                   return true
+              }
+          }
+          EOF
+          cat > App/Sources/SceneDelegate.swift <<'EOF'
+          import UIKit
+
+          class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+              var window: UIWindow?
+
+              func scene(_ scene: UIScene,
+                         willConnectTo session: UISceneSession,
+                         options connectionOptions: UIScene.ConnectionOptions) {
+                  guard let windowScene = scene as? UIWindowScene else { return }
+                  let w = UIWindow(windowScene: windowScene)
+                  w.rootViewController = ViewController()
+                  w.makeKeyAndVisible()
+                  window = w
+                  UIApplication.shared.isIdleTimerDisabled = true   // экран не гаснет во время эмуляции
               }
           }
           EOF
@@ -140,6 +152,12 @@ jobs:
                   UILaunchScreen: {}
                   UIStatusBarHidden: true
                   UIRequiresFullScreen: true
+                  UIApplicationSceneManifest:
+                    UIApplicationSupportsMultipleScenes: false
+                    UISceneConfigurations:
+                      UIWindowSceneSessionRoleApplication:
+                        - UISceneConfigurationName: Default Configuration
+                          UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).SceneDelegate
                   UISupportedInterfaceOrientations:
                     - UIInterfaceOrientationPortrait
                     - UIInterfaceOrientationLandscapeLeft

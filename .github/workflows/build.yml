@@ -1,0 +1,35 @@
+name: Build
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        scheme: [rootful, rootless]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip
+        run: unzip -q AndroidGestures.zip
+      - name: Dependencies
+        run: brew install ldid dpkg make
+      - name: Theos + SDK
+        run: |
+          git clone --recursive --depth=1 https://github.com/theos/theos.git "$HOME/theos"
+          git clone --depth=1 https://github.com/theos/sdks.git /tmp/sdks
+          cp -R /tmp/sdks/iPhoneOS16.5.sdk "$HOME/theos/sdks/"
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+      - name: Build
+        run: |
+          cd AndroidGestures
+          [ "${{ matrix.scheme }}" = rootless ] && export THEOS_PACKAGE_SCHEME=rootless
+          gmake package FINALPACKAGE=1
+          mkdir out
+          mv packages/*.deb "out/AndroidGestures-${{ matrix.scheme }}.deb"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AndroidGestures-${{ matrix.scheme }}
+          path: AndroidGestures/out/*.deb

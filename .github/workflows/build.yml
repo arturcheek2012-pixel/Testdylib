@@ -32,6 +32,20 @@ jobs:
       - name: Install PlatformIO
         run: pip install platformio "esptool<5"
 
+      - name: Install IRremoteESP8266 (tries several sources until one works)
+        run: |
+          OK=0
+          for L in "IRremoteESP8266" "crankyoncoder/IRremoteESP8266" \
+                   "https://github.com/markszabo/IRremoteESP8266/archive/refs/tags/v2.8.6.zip" \
+                   "https://github.com/crankyoncoder/IRremoteESP8266/archive/refs/tags/v2.8.6.zip"; do
+            echo "=== trying: $L"
+            if pio pkg install --global --library "$L"; then OK=1; echo "installed from: $L"; break; fi
+          done
+          [ "$OK" = 1 ] || { echo "ERROR: could not install IRremoteESP8266 from any source"; exit 1; }
+          # the library now comes from the global storage, so drop it from this project's lib_deps
+          sed -i '/IRremoteESP8266/d' "$PROJ/platformio.ini"
+          pio pkg list --global | head -20
+
       - name: Build
         run: |
           cd "$PROJ"

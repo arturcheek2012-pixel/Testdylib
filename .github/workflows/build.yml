@@ -1,35 +1,56 @@
-name: Build
+name: Build firmware
 on:
   push:
   workflow_dispatch:
-permissions:
-  contents: write
+
 jobs:
   build:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        scheme: [rootful, rootless]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unzip
-        run: unzip -q AndroidGestures.zip
-      - name: Dependencies
-        run: brew install ldid dpkg make
-      - name: Theos + SDK
+
+      - name: Locate project (unzips automatically if the repo contains only the .zip)
         run: |
-          git clone --recursive --depth=1 https://github.com/theos/theos.git "$HOME/theos"
-          git clone --depth=1 https://github.com/theos/sdks.git /tmp/sdks
-          cp -R /tmp/sdks/iPhoneOS16.5.sdk "$HOME/theos/sdks/"
-          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+          set -e
+          P=$(find . -name platformio.ini -not -path './.git/*' | head -1)
+          if [ -z "$P" ]; then
+            Z=$(find . -name '*.zip' -not -path './.git/*' | head -1)
+            [ -n "$Z" ] || { echo "ERROR: no platformio.ini and no .zip in the repository"; exit 1; }
+            echo "Unzipping $Z"
+            mkdir -p /tmp/proj
+            unzip -q "$Z" -d /tmp/proj
+            P=$(find /tmp/proj -name platformio.ini | head -1)
+            [ -n "$P" ] || { echo "ERROR: platformio.ini not found inside the zip"; exit 1; }
+          fi
+          echo "PROJ=$(cd "$(dirname "$P")" && pwd)" >> "$GITHUB_ENV"
+          echo "Project directory: $(dirname "$P")"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: pip install platformio "esptool<5"
+
       - name: Build
         run: |
-          cd AndroidGestures
-          [ "${{ matrix.scheme }}" = rootless ] && export THEOS_PACKAGE_SCHEME=rootless
-          gmake package FINALPACKAGE=1
-          mkdir out
-          mv packages/*.deb "out/AndroidGestures-${{ matrix.scheme }}.deb"
+          cd "$PROJ"
+          pio run -e esp32dev
+          ls -l .pio/build/esp32dev/*.bin
+
+      - name: Collect binaries
+        run: |
+          mkdir -p /tmp/out
+          B="$PROJ/.pio/build/esp32dev"
+          cp "$B/firmware.bin" "$B/bootloader.bin" "$B/partitions.bin" /tmp/out/
+          BOOT=$(find ~/.platformio/packages/framework-arduinoespressif32 -name boot_app0.bin | head -1)
+          python -m esptool --chip esp32 merge_bin -o /tmp/out/firmware_merged.bin \
+            --flash_mode dio --flash_freq 40m --flash_size 4MB \
+            0x1000 "$B/bootloader.bin" 0x8000 "$B/partitions.bin" 0xe000 "$BOOT" 0x10000 "$B/firmware.bin" \
+            || echo "merge step failed (firmware.bin is still valid)"
+          ls -l /tmp/out
+
       - uses: actions/upload-artifact@v4
         with:
-          name: AndroidGestures-${{ matrix.scheme }}
-          path: AndroidGestures/out/*.deb
+          name: tv-remote-firmware
+          path: /tmp/out/*
